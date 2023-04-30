@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="d-flex justify-content-center" style="margin-top: 100px">
+       <form action="{% url 'login' %}" method="post" >
+           {% csrf_token %}
+           <div class="card">
+                 <div class="card-header">
+                     Авторизация
+                 </div>
+                 <div class="card-body">
+                      <label for="login_input" class="form-label">Логин</label>
+                     <input id="login_input" class="form-control" type="text" name="username">
+                     <label for="password_input" class="form-label">Пароль</label>
+                     <input id="password_input"  class="form-control" name="password" type="password">
+                     <div class="d-flex justify-content-between mt-3">
+                         <button class="btn btn-outline-primary" type="submit"> Войти</button>
+                     </div>
+                 </div>
+            </div>
+        </form>
+   </div>
+{% endblock %}

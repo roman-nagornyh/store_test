@@ -1,0 +1,32 @@
+                      # phpstorm project works
+.idea
+
+# netbeans project works
+nbproject
+
+# zend studio for eclipse project works
+.buildpath
+.project
+.settings
+
+# sublime text project / workspace works
+*.sublime-project
+*.sublime-workspace
+
+# visual studio code project works
+.vscode
+
+# windows thumbnail cache
+Thumbs.db
+
+# Mac DS_Store Files
+.DS_Store
+
+# Environment varibles
+*.env
+# Our settings
+*pyc
+__pycache__
+static/
+media/
+minio-data
