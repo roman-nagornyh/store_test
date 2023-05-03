@@ -1,11 +1,12 @@
-from django.views.generic import ListView, TemplateView, CreateView
-from .models import Product, Bucket, Order, Address, ProductOrder
+from django.views.generic import ListView, TemplateView
+from .models import Product, Bucket, Order
 from django.http import HttpResponseRedirect
 from django.urls import reverse
-from django.db import transaction
+
 from django.db.models import F
 from django.db.models.aggregates import Count, Sum
 from django.contrib.auth.views import LoginView
+from .services.order_creator_service import OrderCreatorService
 
 
 class ProductList(ListView):
@@ -61,63 +62,24 @@ class OrderListView(ListView):
             return self.queryset.filter(phone=self.request.session["phone"])
 
 
-class OrderCreateView(CreateView):
-    model = Order
-    fields = ("phone", "address")
+class OrderCreateNewView(TemplateView):
     template_name = "orders/create.html"
-    queryset = Order.objects.all()
 
-    @transaction.atomic()
     def post(self, request, *args, **kwargs):
-        post = request.POST
-        if (
-            request.user.is_authenticated
-            and Address.objects.filter(user_id=request.user.pk).exists()
-        ):
-            address = self.request.user.address
-        else:
-            address = Address.objects.create(
-                city=post.get("city"),
-                street=post.get("street"),
-                house=post.get("house"),
-                entrance=post.get("entrance"),
-                apartment=post.get("apartment"),
-                user_id=request.user.pk if request.user.is_authenticated else None,
-            )
-        order = Order.objects.create(
-            phone=post.get("phone"),
-            address_id=address.pk,
-            status_id=1,
-            customer_name=post.get("customer_name"),
+        products = (
+            request.session.pop("products") if "products" in request.session else None
         )
-        products = list()
-        if not request.user.is_authenticated:
-            if "products" in request.session:
-                session_products = request.session.pop("products")
-                products = Product.objects.filter(pk__in=set(session_products))
-                for product in products:
-                    product.len = session_products.count(product.pk)
-            request.session["phone"] = post.get("phone")
+        order_service = OrderCreatorService(
+            data=request.POST, user=request.user, selected_products=products
+        )
+        result = order_service.create()
+        if not isinstance(result, bool):
+            context = {item.form_key: item for item in result}
+            return self.render_to_response(context=context)
         else:
-            products = Product.objects.filter(bucket__user_id=request.user.pk).annotate(
-                len=Count("pk", distinct=True)
-            )
-
-        order_products = [
-            ProductOrder(
-                order_id=order.pk,
-                product_id=product.pk,
-                price=product.price,
-                count=product.len,
-            )
-            for product in products
-        ]
-        _ = ProductOrder.objects.bulk_create(order_products)
-        if len(_) == 0:
-            raise Exception("Произошла ошибка")
-        if request.user.is_authenticated:
-            Bucket.objects.filter(user_id=request.user.pk).delete()
-        return HttpResponseRedirect(redirect_to=reverse("application:order_list"))
+            if not request.user.is_authenticated:
+                request.session["phone"] = request.POST["phone"]
+            return HttpResponseRedirect(redirect_to=reverse("application:order_list"))
 
 
 def add_product_bucket(request, product_id):
