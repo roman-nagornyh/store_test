@@ -1,13 +1,16 @@
-from application.models import Address, User, ProductOrder, Product
+from application.models import Address, User, ProductOrder, Product, Bucket
 from application.forms import AddressForm, OrderForm, BaseOrderForm
 from django.forms import ModelForm
 from django.db import transaction
 from django.db.models.aggregates import Count
+from django.http import QueryDict
 
 
 class OrderCreatorService:
-    def __init__(self, data, user: User, selected_products: list[int] = None):
-        self._data = data
+    def __init__(
+        self, data: QueryDict, user: User, selected_products: list[int] = None
+    ):
+        self._data = data.dict()
         self._user = user
         self._selected_products = selected_products
 
@@ -34,23 +37,25 @@ class OrderCreatorService:
         return address_form
 
     def _create_order(self, address_id: int) -> int | BaseOrderForm:
+        self._data.update({"status": 1, "address": address_id})
         order_form = OrderForm(data=self._data)
-        order_form.status = 1
-        order_form.address = address_id
         if order_form.is_valid():
             return order_form.save().pk
         else:
             return order_form
 
     @transaction.atomic()
-    def create(self) -> bool | BaseOrderForm:
+    def create(self) -> bool | list[BaseOrderForm]:
         products = self._get_products()
         address = self._get_or_create_address()
+        errors_form = []
         if isinstance(address, BaseOrderForm):
-            return address
+            errors_form.append(address)
         order = self._create_order(address)
         if isinstance(order, BaseOrderForm):
-            return order
+            errors_form.append(order)
+        if len(errors_form) > 0:
+            return errors_form
         order_products = [
             ProductOrder(
                 order_id=order,
@@ -61,4 +66,6 @@ class OrderCreatorService:
             for product in products
         ]
         res = ProductOrder.objects.bulk_create(order_products)
+        if self._user.is_authenticated:
+            Bucket.objects.filter(user_id=self._user.pk).delete()
         return True if len(res) > 0 else False

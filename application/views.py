@@ -6,7 +6,6 @@ from django.urls import reverse
 from django.db.models import F
 from django.db.models.aggregates import Count, Sum
 from django.contrib.auth.views import LoginView
-from .forms import BaseOrderForm
 from .services.order_creator_service import OrderCreatorService
 
 
@@ -68,15 +67,19 @@ class OrderCreateNewView(TemplateView):
 
     def post(self, request, *args, **kwargs):
         products = (
-            request.session["products"] if "products" in request.session else None
+            request.session.pop("products") if "products" in request.session else None
         )
         order_service = OrderCreatorService(
             data=request.POST, user=request.user, selected_products=products
         )
-        result: BaseOrderForm = order_service.create()
-        if isinstance(result, BaseOrderForm):
-            context = {result.form_key: result}
+        result = order_service.create()
+        if not isinstance(result, bool):
+            context = {item.form_key: item for item in result}
             return self.render_to_response(context=context)
+        else:
+            if not request.user.is_authenticated:
+                request.session["phone"] = request.POST["phone"]
+            return HttpResponseRedirect(redirect_to=reverse("application:order_list"))
 
 
 def add_product_bucket(request, product_id):
