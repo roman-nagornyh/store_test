@@ -62,7 +62,7 @@ class OrderListView(ListView):
             return self.queryset.filter(phone=self.request.session["phone"])
 
 
-class OrderCreateNewView(TemplateView):
+class OrderCreateView(TemplateView):
     template_name = "orders/create.html"
 
     def post(self, request, *args, **kwargs):

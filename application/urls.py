@@ -3,7 +3,7 @@ from .views import (
     ProductList,
     add_product_bucket,
     BucketView,
-    OrderCreateNewView as OrderCreateView,
+    OrderCreateView,
     OrderListView,
     product_subtraction,
     product_delete,
