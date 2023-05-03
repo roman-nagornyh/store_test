@@ -15,7 +15,10 @@ class User(AbstractUser):
 
 class Address(models.Model):
     city = models.CharField(
-        verbose_name="Город", null=False, blank=False, max_length=100
+        verbose_name="Город",
+        null=False,
+        blank=False,
+        max_length=100,
     )
     street = models.CharField(
         verbose_name="Улица", null=False, blank=False, max_length=100
@@ -25,7 +28,11 @@ class Address(models.Model):
     apartment = models.IntegerField(verbose_name="Квартира", null=False, blank=False)
 
     user = models.OneToOneField(
-        "User", null=True, verbose_name="Пользователь", on_delete=models.RESTRICT
+        "User",
+        null=True,
+        verbose_name="Пользователь",
+        on_delete=models.RESTRICT,
+        blank=True,
     )
 
     def __str__(self):
